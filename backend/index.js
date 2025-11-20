@@ -1,39 +1,37 @@
 import express from "express";
 import cors from "cors";
-import pg from "pg";
-import {
-  DB_DATABASE,
-  DB_HOST,
-  DB_PASSWORD,
-  DB_PORT,
-  DB_USER,
-  FRONTEND_URL,
-  PORT,
-} from "./config.js";
+import { Pool } from "pg";
+import { PORT, FRONTEND_URL } from "./config.js";
 
 const app = express();
-const pool = new pg.Pool({
-  host: DB_HOST,
-  database: DB_DATABASE,
-  user: DB_USER,
-  password: DB_PASSWORD,
-  port: DB_PORT,
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
-app.use(
-  cors({
-    origin: FRONTEND_URL,
-  })
-);
+app.use(cors({
+  origin: FRONTEND_URL
+}));
+
+app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.send("Backend funcionando perfecto en Render 🚀");
+});
 
 app.get("/ping", async (req, res) => {
-  const result = await pool.query("SELECT NOW()");
-
-  res.send({
-    pong: result.rows[0].now,
-  });
+  try {
+    const result = await pool.query("SELECT NOW()");
+    res.json({ message: "DB conectada", hora: result.rows[0].now });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log("server started on port 3000");
+  console.log(`Servidor arriba en puerto ${PORT}`);
 });
